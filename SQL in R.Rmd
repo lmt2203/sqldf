@@ -6,25 +6,145 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+library(sqldf)
+library(RSQLite)
+library(RODBC)
+
+
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+sqldf('SELECT age, circumference 
+      FROM Orange 
+      WHERE Tree = 1 
+      ORDER BY circumference ASC')
 ```
 
-## Including Plots
+# SQL Queries
 
-You can also embed plots, for example:
+SQL syntax is case insensitive so the two following commands are equivalent
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+sqldf("SELECT * FROM iris")
+sqldf("select*from iris")
+
+
+# Basic syntax: SELECT variable 1, variable 2 FROM DATA
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+data(BOD)
+head(BOD)
+
+sqldf('SELECT demand FROM BOD')
+sqldf('select time,demand from BOD')
+
+```
+
+
+If you have variable with `.` in their name, refer to them in quotes
+
+```{r}
+sqldf('SELECT "Petal.Width" FROM iris')
+```
+
+## Wildcard
+
+A wild card can be passed to extract everything
+
+```{r}
+bod2 <- sqldf('SELECT * FROM BOD')
+bod2[1:3,]
+```
+
+
+## LIMIT
+
+To control the number of results returned, use `LIMIT #`
+
+```{r}
+sqldf('SELECT * FROM iris LIMIT 5')
+```
+
+
+## ORDER BY
+
+To order variables, use the syntax `ORDER BY var1 {ASC/DESC}, var2 {ASC/DESC}` where the choice of `ASC` for ascending or `DESC` for descending is made per variable
+
+```{r}
+sqldf ("SELECT * FROM Orange ORDER BY age ASC, circumference DESC LIMIT 10")
+```
+
+
+## WHERE
+
+Conditional statemenets can be added via `WHERE`
+
+```{r}
+sqldf ("SELECT demand from BOD WHERE Time <6")
+```
+
+Both `AND` and `OR` are valid, along with parentheses to affect order of operations
+
+```{r}
+sqldf("SELECT * FROM rock WHERE (peri > 5000 AND shape < 0.05) OR perm > 1000")
+```
+
+
+### `IN`
+
+`WHERE IN ` is used similar to R's ` %in% `. It also supports `NOT`. 
+
+```{r}
+sqldf("SELECT * FROM BOD WHERE Time IN (1,7)")
+
+sqldf("SELECT * FROM BOD WHERE Time NOT IN (1,7)")
+
+sqldf("SELECT * FROM BOD WHERE (Time > 1 AND Time < 7)")
+
+```
+
+
+### `LIKE`
+
+`LIKE` can be thought of as a weak regular expression command. It only allows the single wildcard `%` which matches any number of charactesr. For example, to extract the data where the feed ends with "bean":
+
+```{r}
+sqldf('SELECT * FROM chickwts WHERE feed LIKE "%bean" LIMIT 5')
+```
+
+
+
+## Aggregated data
+
+Select statements can create aggregated data using `AVG`, `MEDIAN`, `MAX`, `MIN`, `SUM` as functions in the list of variables to select. The `GROUP BY` statement can be added to aggregate by groups. `AS` to rename
+
+```{r}
+sqldf('SELECT AVG(circumference) FROM Orange')
+```
+
+
+```{r}
+sqldf('SELECT tree, AVG(circumference) AS meancirc FROM Orange GROUP BY tree')
+
+```
+
+
+### Counting data
+
+`SELECT COUNT()` retunrs the number of observations. Passing `*` or nothing returns total rows, passing a variable name returns the number of non-NA entries. `AS` works as well.
+
+```{r}
+d <- data.frame(a = c(1,1,1), b = c(1, NA, NA))
+
+d
+```
+
+```{r}
+sqldf('SELECT COUNT() as numrows FROM d')
+
+sqldf('SELECT COUNT(a) from d')
+```
+
